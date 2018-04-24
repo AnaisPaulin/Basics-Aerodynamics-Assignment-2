@@ -106,39 +106,56 @@ Cl_ref = data(:,2);
 Cd_ref = data(:,3);
 
 AOA_0 = degtorad(3); %10deg
-AOA1 = AOA_0*ones(1,N); %constant
-AOA2 = AOA_0.*linspace(1,0.2,N); %linear
+AOA(1,:) = AOA_0*ones(1,N); %constant
+AOA(2,:) = AOA_0.*linspace(1,0.2,N); %linear
 %twist3 = ; %ideal ?
 
-AOA3 = AOA2(end)./r; %not AOA_0 but theta_tip
+AOA(3,:) = AOA(2,end)./r; %not AOA_0 but theta_tip
 
-AOA3(1) = AOA2(end) + degtorad(1);
-AOA3_lin = (AOA3(end)-AOA3(1))*r + AOA3(1);
-for i =1:length(AOA3)
-   if AOA3(i) > AOA3_lin(i)
-       AOA3(i) = AOA3_lin(i);
+AOA(3,1) = AOA(2,end) + degtorad(1);
+AOA3_lin = (AOA(3,end)-AOA(3,1))*r + AOA(3,1);
+
+for i =1:length(AOA(3,:))
+   if AOA(3,i) > AOA3_lin(i)
+       AOA(3,i) = AOA3_lin(i);
    end
 end
 
 figure()
-plot(r,AOA3)
+plot(r,AOA(3,:))
 hold on 
-plot(r,AOA2(end)./r);
+plot(r,AOA(2,end)./r);
 
 % Cl and Cd values from http://airfoiltools.com/
+for i =1:3
+    Cl(i,:) = interp1(alpha_ref,Cl_ref,AOA(i,:));
+    Cd(i,:) = interp1(alpha_ref,Cd_ref,AOA(i,:));
+end
 
-Cl1 = interp1(alpha_ref,Cl_ref,AOA1);
-Cl2 = interp1(alpha_ref,Cl_ref,AOA2);
-Cl3 = interp1(alpha_ref,Cl_ref,AOA3);
-Cd1 = interp1(alpha_ref,Cd_ref,AOA1);
-Cd2 = interp1(alpha_ref,Cd_ref,AOA2);
-Cd3 = interp1(alpha_ref,Cd_ref,AOA3);
+%pour avoir les theta doit on enlever phi ?
 
+theta_tw = AOA(:,15)./r;
+theta_75 = AOA(:,15); %theta 3/4R
 C_Treq = T/(rho*pi*R^4*omega^2);
-C_T = 0
-F = 1;
+
 max_it = 100; %maximum number of iterations
 
-for i =1:max_it
+C_T = zeros(1,max_it+1);
+F = zeros(1,max_it+1);
+
+i1 = 2; % linear blade
+theta0(1,:) = 6*C_Treq./(sigma.*Cl(i1,:)) -3/4*theta_tw + 3/2*sqrt(C_Treq/2);
+for i2 =2:max_it
+        theta0(i2,:) = theta0(i2-1,:) + (6*(C_Treq - C_T(i2))./(sigma.*Cl(i1,:)) ...
+            + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
+        theta(i2,:) = theta0(i2,:) + AOA(i1,:);
+        lambda(i2,:) = sigma.*Cl(i1,:)/(16*F(i2)).*(sqrt(1 +  ... 
+            32*F(i2)./(sigma.*Cl(i1,:)).*theta(i2,:).*r) - 1);
+        phi_tip = lambda(i2,end)/R;
+        f(i2) = N_b/2*(1-r)/(r*phi_tip);
+        F(i2+1) = 2/pi * arccos(exp(-f(i2)));
+        C_T(i2+1) = 1/2*sigma.*Cl(i1,:)*(theta_75(i1)/3) ;%- lambda(
     
+end
+
     
