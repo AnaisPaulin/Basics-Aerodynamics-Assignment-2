@@ -140,11 +140,11 @@ C_Treq = T/(rho*pi*R^4*omega^2);
 
 max_it = 100; %maximum number of iterations
 
-C_T = zeros(1,max_it+1);
-F = zeros(1,max_it+1);
+C_T = zeros(max_it+1,N);
+F = ones(1,max_it+1);
 
 i1 = 2; % linear blade
-theta0(1,:) = 6*C_Treq./(sigma.*Cl(i1,:)) -3/4*theta_tw + 3/2*sqrt(C_Treq/2);
+theta0(1,:) = 6*C_Treq./(sigma.*Cl(i1,:)) - 3/4*theta_tw(i1,:) + 3/2*sqrt(C_Treq/2);
 for i2 =2:max_it
         theta0(i2,:) = theta0(i2-1,:) + (6*(C_Treq - C_T(i2))./(sigma.*Cl(i1,:)) ...
             + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
@@ -153,8 +153,11 @@ for i2 =2:max_it
             32*F(i2)./(sigma.*Cl(i1,:)).*theta(i2,:).*r) - 1);
         phi_tip = lambda(i2,end)/R;
         f(i2) = N_b/2*(1-r)/(r*phi_tip);
-        F(i2+1) = 2/pi * arccos(exp(-f(i2)));
-        C_T(i2+1) = 1/2*sigma.*Cl(i1,:)*(theta_75(i1)/3) ;%- lambda(
+        F(i2+1) = 2/pi * acos(exp(-f(i2)));
+        C_T(i2+1,:) = 1/2*sigma.*Cl(i1,:)*(theta_75(i1)./3 - lambda(i2,:)/2) ;
+%         if C_T == C_Treq
+%             break
+%         end
     
 end
 
