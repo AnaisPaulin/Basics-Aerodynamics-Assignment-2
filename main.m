@@ -14,7 +14,7 @@ E=650000; %J/kg
 V_tip = 100; %Mach = 0.4
 N_b = [ 2 3 4 ];
 %chord = [1:1:10]*10^(-2); %m
-R = [10:5:40]*10^(-2); %m
+R = [10:5:35]*10^(-2); %m
 CoR = [0.05:0.05:0.2];
 omega = V_tip./R;
 %omega = [200:50:450]; %rad/s
@@ -97,7 +97,66 @@ ylabel('Hovering time [s]')
 N = 20;
 dr = R/(N-1);
 r = [0:dr:R]./R;
-sigma = N_b*chord/(pi)./r;
+sigma = N_b*chord/(pi*R);
+C_Treq = T/(4*rho*pi*R^4*omega^2);
+
+theta_tip = 4*C_Treq/(sigma*2*pi) + sqrt(C_Treq/2);
+
+theta_ref = degtorad(4); %4deg??
+theta(1,:) = theta_ref*ones(1,N); %constant
+theta(2,:) = linspace(theta_ref,theta_tip,N); %linear
+%twist3 = ; %ideal ?
+
+theta(3,:) = theta_tip./r; %not AOA_0 but theta_tip
+
+theta_tw = [0 ; (theta_tip - theta_ref);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
+theta_75 = theta(:,15); %theta 3/4R
+
+
+
+%Simple version for ideal case
+
+theta_simple = theta_tip./r;
+
+%Complicated general version
+max_it = 100; %maximum number of iterations
+
+dC_T = zeros(max_it+1,N);
+C_T = trapz(dC_T);
+F = ones(max_it+1,N);
+
+i1 = 3; %type of twist
+
+theta0(1) = 6*C_Treq./(sigma*2*pi) - 3/4*theta_tw(i1) + 3/2*sqrt(C_Treq/2);
+theta3_lin = (theta_tip*(1 - 1/0.6)/0.4)*r + theta0(1); %use that
+theta(3,:) = theta3_lin; 
+
+for i2 =1:max_it
+        theta0(i2+1,:) = theta0(i2,:) + (6*(C_Treq - C_T(i2))./(sigma*2*pi) ...
+            + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
+        theta(i1,:) = theta0(i2,:) + theta_tw(i1).*r;
+        lambda(i2,:) = sigma*2*pi./(16.*F(i2,:)).*(sqrt(1 +  ... 
+            32.*F(i2,:)./(sigma*2*pi).*theta(i1,:).*r) - 1);
+        phi = lambda(i2,:)./r;
+        f(i2,:) = N_b/2.*(1-r)./(r.*phi);
+        F(i2+1,:) = 2/pi .* acos(exp(-f(i2)));
+        dC_T(i2,:) = 1/2*sigma*2*pi.*r.^2;
+        %dC_T(i2,:) = 1/2*sigma.*Cl(i1,:).*(theta_75(i1)./3 - lambda(i2,:)/2);
+        C_T(i2) = trapz(r,dC_T(i2,:));
+        if abs(C_T(i2)-C_Treq) < 10^(-3)
+            break
+        end
+        T_2(i2) = (4*rho*pi*R^4*omega^2)*C_T(i2);
+
+end
+
+figure()
+%plot(r,radtodeg(theta(3,:)))
+hold on 
+plot(r,radtodeg(theta(2,end)./r));
+plot(r,radtodeg(theta(3,:)));
+plot(r,radtodeg(theta(2,:)))
+
 
 %Data from source
 load('data.txt');
@@ -105,60 +164,9 @@ alpha_ref = degtorad(data(:,1));
 Cl_ref = data(:,2);
 Cd_ref = data(:,3);
 
-AOA_0 = degtorad(3); %10deg
-AOA(1,:) = AOA_0*ones(1,N); %constant
-AOA(2,:) = AOA_0.*linspace(1,0.2,N); %linear
-%twist3 = ; %ideal ?
-
-AOA(3,:) = AOA(2,end)./r; %not AOA_0 but theta_tip
-
-AOA(3,1) = AOA(2,end) + degtorad(1);
-AOA3_lin = (AOA(3,end)-AOA(3,1))*r + AOA(3,1);
-
-for i =1:length(AOA(3,:))
-   if AOA(3,i) > AOA3_lin(i)
-       AOA(3,i) = AOA3_lin(i);
-   end
-end
-
-figure()
-plot(r,AOA(3,:))
-hold on 
-plot(r,AOA(2,end)./r);
-
 % Cl and Cd values from http://airfoiltools.com/
 for i =1:3
-    Cl(i,:) = interp1(alpha_ref,Cl_ref,AOA(i,:));
-    Cd(i,:) = interp1(alpha_ref,Cd_ref,AOA(i,:));
+    Cl(i,:) = interp1(alpha_ref,Cl_ref,theta(i,:));
+    Cd(i,:) = interp1(alpha_ref,Cd_ref,theta(i,:));
 end
 
-%pour avoir les theta doit on enlever phi ?
-
-theta_tw = AOA./R; %dépend de r ?
-theta_75 = AOA(:,15); %theta 3/4R
-C_Treq = T/(4*rho*pi*R^4*omega^2);
-
-max_it = 100; %maximum number of iterations
-
-C_T = zeros(max_it+1,N);
-F = ones(1,max_it+1);
-
-i1 = 2; % linear blade
-theta0(1,:) = 6*C_Treq./(sigma.*Cl(i1,:)) - 3/4*theta_tw(i1) + 3/2*sqrt(C_Treq/2);
-for i2 =1:max_it
-        theta0(i2+1,:) = theta0(i2,:) + (6*(C_Treq - C_T(i2))./(sigma.*Cl(i1,:)) ...
-            + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
-        theta(i2,:) = theta0(i2,:) + AOA(i1,:);
-        lambda(i2,:) = sigma.*Cl(i1,:)/(16*F(i2)).*(sqrt(1 +  ... 
-            32*F(i2)./(sigma.*Cl(i1,:)).*theta(i2,:).*r) - 1);
-        phi_tip = lambda(i2,end)/R;
-        f(i2) = N_b/2*(1-r)/(r*phi_tip);
-        F(i2+1) = 2/pi * acos(exp(-f(i2)));
-        C_T(i2,:) = 1/2*sigma.*Cl(i1,:).*(theta_75(i1)./3 - lambda(i2,:)/2) ;
-%         if C_T == C_Treq
-%             break
-%         end
-    
-end
-
-    
