@@ -14,8 +14,9 @@ E=650000; %J/kg
 V_tip = 100; %Mach = 0.4
 N_b = [ 2 3 4 ];
 %chord = [1:1:10]*10^(-2); %m
-R = [10:5:35]*10^(-2); %m
+R = [10:1:45]*10^(-2); %m
 CoR = [0.05:0.05:0.2];
+CoR = 0.1;
 omega = V_tip./R;
 %omega = [200:50:450]; %rad/s
 kappa = 1.2; %cf litterature
@@ -53,8 +54,8 @@ omega = result(4);
    
 figure()
 plot(R,P{index(1),index(2)}(:,index(4)))
-xlabel('Radius of the rotor')
-ylabel('Power required')
+xlabel('Radius of the rotor [m]')
+ylabel('Power required [W]')
 title('Influence of the value of R on the power required to hover')
 
 R = result(3);
@@ -79,14 +80,18 @@ for i=1:length(m_2)
 
 end
 
+[time_max, i_max] = max(time_hover_2);
+N_max = (m_2(i_max)-4)/2;
+
+
 figure()
-plot(m_2-4,P_available-P)
+plot((m_2-4)/2,P_available-P)
 title('Difference between the available and the required power')
 xlabel('Number of batteries')
 ylabel('Power difference [W]')
 
 figure()
-plot(m_2-4,time_hover_2)
+plot((m_2-4)/2,time_hover_2)
 title('Hovering time')
 xlabel('Number of batteries')
 ylabel('Hovering time [s]')
@@ -102,15 +107,17 @@ C_Treq = T/(4*rho*pi*R^4*omega^2);
 
 theta_tip = 4*C_Treq/(sigma*2*pi) + sqrt(C_Treq/2);
 
-theta_ref = degtorad(4); %4deg??
-theta(1,:) = theta_ref*ones(1,N); %constant
+theta_ref = degtorad(1); %4deg??
+for i0 = 1:5
+    
+theta(1,:) = theta_ref*ones(1,N) %constant;
 theta(2,:) = linspace(theta_ref,theta_tip,N); %linear
 %twist3 = ; %ideal ?
 
 theta(3,:) = theta_tip./r; %not AOA_0 but theta_tip
 
 theta_tw = [0 ; (theta_tip - theta_ref);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
-
+ %theta 3/4R
 
 
 
@@ -122,17 +129,17 @@ theta_simple = theta_tip./r;
 max_it = 100; %maximum number of iterations
 
 dC_T = zeros(max_it+1,N);
-C_T(1) = trapz(r,dC_T(1,:));
+C_T = trapz(dC_T);
 F = ones(max_it+1,N);
 
-i1 = 3; %type of twist
+i1 = 1; %type of twist
 
 theta0(1) = 6*C_Treq./(sigma*2*pi) - 3/4*theta_tw(i1) + 3/2*sqrt(C_Treq/2);
 theta3_lin = (theta_tip*(1 - 1/0.6)/0.4)*r + theta0(1); %use that
 theta(3,:) = theta3_lin; 
+
 i2=1;
-while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)
-        
+while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)   
         theta0(i2+1) = theta0(i2) + (6*(C_Treq - C_T(i2))./(sigma*2*pi) ...
             + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
         theta(i1,:) = theta0(i2) + theta_tw(i1).*r;
@@ -150,13 +157,17 @@ while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)
 i2=i2+1;
 end
 
-figure()
+figure(5 + i0)
 %plot(r,radtodeg(theta(3,:)))
 hold on 
 plot(r,radtodeg(theta(2,end)./r));
-plot(r,radtodeg(theta(3,:)));
-plot(r,radtodeg(theta(2,:)))
+plot(r,radtodeg(theta(i1,:)));
+xlabel('r')
+ylabel('Twist [°]')
 
+theta_ref = theta_ref + degtorad(1);
+
+end
 
 %Data from source
 load('data.txt');
@@ -169,4 +180,4 @@ for i =1:3
     Cl(i,:) = interp1(alpha_ref,Cl_ref,theta(i,:));
     Cd(i,:) = interp1(alpha_ref,Cd_ref,theta(i,:));
 end
-    
+
