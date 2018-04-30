@@ -57,6 +57,7 @@ plot(R,P{index(1),index(2)}(:,index(4)))
 xlabel('Radius of the rotor [m]')
 ylabel('Power required [W]')
 title('Influence of the value of R on the power required to hover')
+enhance_plot('TIMES',14,2,8,0)
 
 R = result(3);
 chord = CoR*R;
@@ -89,12 +90,14 @@ plot((m_2-4)/2,P_available-P)
 title('Difference between the available and the required power')
 xlabel('Number of batteries')
 ylabel('Power difference [W]')
+enhance_plot('TIMES',14,2,8,0)
 
 figure()
 plot((m_2-4)/2,time_hover_2)
 title('Hovering time')
 xlabel('Number of batteries')
 ylabel('Hovering time [s]')
+enhance_plot('TIMES',14,2,8,0)
         
 
 %% Q3 
@@ -103,14 +106,15 @@ N = 20;
 dr = R/(N-1);
 r = [0:dr:R]./R;
 sigma = N_b*chord/(pi*R);
+T = m*g/4;
 C_Treq = T/(4*rho*pi*R^4*omega^2);
 
 theta_tip = 4*C_Treq/(sigma*2*pi) + sqrt(C_Treq/2);
 
 theta_ref = degtorad(1); %4deg??
-for i0 = 1:5
+
     
-theta(1,:) = theta_ref*ones(1,N) %constant;
+theta(1,:) = theta_ref*ones(1,N); %constant;
 theta(2,:) = linspace(theta_ref,theta_tip,N); %linear
 %twist3 = ; %ideal ?
 
@@ -132,7 +136,7 @@ dC_T = zeros(max_it+1,N);
 C_T = trapz(dC_T);
 F = ones(max_it+1,N);
 
-i1 = 1; %type of twist
+i1 = 3; %type of twist
 
 theta0(1) = 6*C_Treq./(sigma*2*pi) - 3/4*theta_tw(i1) + 3/2*sqrt(C_Treq/2);
 theta3_lin = (theta_tip*(1 - 1/0.6)/0.4)*r + theta0(1); %use that
@@ -152,22 +156,25 @@ while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)
         %dC_T(i2+1,:) = 1/2*sigma*2*pi.*r.^2;
         dC_T(i2+1,:) = 1/2*sigma.*2*pi.*(theta_75(i1)./3 - lambda(i2,:)/2);
         C_T(i2+1) = trapz(r,dC_T(i2+1,:));
-
         T_2(i2) = (4*rho*pi*R^4*omega^2)*C_T(i2+1);
+        
+        C_T_sol = C_T(i2+1);
+        theta_sol = theta(i1,:);
+        T_sol = C_T_sol *pi* 4* rho * omega^2 * R^4;
 i2=i2+1;
 end
 
-figure(5 + i0)
+figure()
 %plot(r,radtodeg(theta(3,:)))
 hold on 
 plot(r,radtodeg(theta(2,end)./r));
 plot(r,radtodeg(theta(i1,:)));
 xlabel('r')
 ylabel('Twist [°]')
+enhance_plot('TIMES',14,2,8,0)
 
-theta_ref = theta_ref + degtorad(1);
+%theta_ref = theta_ref + degtorad(1);
 
-end
 
 %Data from source
 load('data.txt');
@@ -181,3 +188,41 @@ for i =1:3
     Cd(i,:) = interp1(alpha_ref,Cd_ref,theta(i,:));
 end
 
+%% Q4
+
+A_front = 0.1^2;
+V_inf = [0:1:60];
+W = m*g;
+D = 1/2*rho*A_front*V_inf.^2*1.28;
+alpha = atan(D/W);
+
+v_h = sqrt(T_sol*4/(2*rho*pi*R^2)); %hovering for one rotor
+
+for j = 1:length(V_inf)
+f= @(v_i) v_i - v_h^2/(sqrt((cos(alpha(j))*V_inf(j))^2 + (V_inf(j)*sin(alpha(j)) + v_i)^2)) ;
+V_i(j) = fzero(f,0.001);
+end
+
+P = 4*T*(V_inf.*sin(alpha) + V_i);
+
+
+
+%close all
+
+figure()
+plot(V_inf, P)
+hold on 
+plot(V_inf, 1000*ones(1,length(V_inf)),'--')
+xlabel('Wind  speed [m/s]')
+ylabel('Power required [W]')
+enhance_plot('TIMES',14,2,8,0)
+
+%% Q5
+
+L_rotor = T*cos(alpha);
+L_wing = 
+
+L_tot = L_rotor + L_wing;
+D_tot = D
+
+alpha2 = atan(D_tot/L_tot);
