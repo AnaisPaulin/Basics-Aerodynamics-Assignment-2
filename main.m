@@ -111,17 +111,13 @@ C_Treq = T/(4*rho*pi*R^4*omega^2);
 
 theta_tip = 4*C_Treq/(sigma*2*pi) + sqrt(C_Treq/2);
 
-theta_ref = degtorad(1); %4deg??
+theta_ref = theta_tip + degtorad(5); %4deg??
 
     
 theta(1,:) = theta_ref*ones(1,N); %constant;
-theta(2,:) = linspace(theta_ref,theta_tip,N); %linear
-%twist3 = ; %ideal ?
+
 
 theta(3,:) = theta_tip./r; %not AOA_0 but theta_tip
-
-theta_tw = [0 ; (theta_tip - theta_ref);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
- %theta 3/4R
 
 
 
@@ -134,11 +130,21 @@ max_it = 100; %maximum number of iterations
 
 dC_T = zeros(max_it+1,N);
 C_T = trapz(dC_T);
+dC_P = zeros(max_it+1,N);
+C_P = trapz(dC_T);;
 F = ones(max_it+1,N);
 
-i1 = 3; %type of twist
+i1 = 1; %type of twist
 
+theta0(1) = 4*R*(6*C_Treq/(sigma*2*pi) - 3/(4*R)*theta_tip + 3*sqrt(2)/4*sqrt(C_Treq));
+theta_tw = [0 ; (theta_tip - theta0);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
 theta0(1) = 6*C_Treq./(sigma*2*pi) - 3/4*theta_tw(i1) + 3/2*sqrt(C_Treq/2);
+
+
+theta(2,:) = linspace(theta0(1),theta_tip,N); %linear
+
+ %theta 3/4R
+ 
 theta3_lin = (theta_tip*(1 - 1/0.6)/0.4)*r + theta0(1); %use that
 theta(3,:) = theta3_lin; 
 
@@ -146,17 +152,27 @@ i2=1;
 while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)   
         theta0(i2+1) = theta0(i2) + (6*(C_Treq - C_T(i2))./(sigma*2*pi) ...
             + 3*sqrt(2)/4*(sqrt(C_Treq)-sqrt(C_T(i2))));
+        %theta_tw(i1) = (theta_tip - theta0(i2+1));
         theta(i1,:) = theta0(i2) + theta_tw(i1).*r;
         theta_75 = theta(:,15); %theta 3/4R
         lambda(i2,:) = sigma*2*pi./(16.*F(i2,:)).*(sqrt(1 +  ... 
             32.*F(i2,:)./(sigma*2*pi).*theta(i1,:).*r) - 1);
         phi = lambda(i2,:)./r;
+        
+        phi_ideal = sqrt(C_Treq/2)./r;
+        phi_ideal(1) = 10000;
+        
         f(i2,:) = N_b/2.*(1-r)./(r.*phi);
         F(i2+1,:) = 2/pi .* acos(exp(-f(i2)));
         %dC_T(i2+1,:) = 1/2*sigma*2*pi.*r.^2;
         dC_T(i2+1,:) = 1/2*sigma.*2*pi.*(theta_75(i1)./3 - lambda(i2,:)/2);
         C_T(i2+1) = trapz(r,dC_T(i2+1,:));
+        dC_P(i2+1,:) = 1/2*sigma*(2*pi*phi_ideal.*r.^3 + C_d0*r.^3);
+        
+        C_P(i2+1) = trapz(r,dC_P(i2+1,:));
+        
         T_2(i2) = (4*rho*pi*R^4*omega^2)*C_T(i2+1);
+        P_2(i2) = (rho*pi*R^5*omega^3)*C_P(i2+1);
         
         C_T_sol = C_T(i2+1);
         theta_sol = theta(i1,:);
@@ -168,7 +184,7 @@ figure()
 %plot(r,radtodeg(theta(3,:)))
 hold on 
 plot(r,radtodeg(theta(2,end)./r));
-plot(r,radtodeg(theta(i1,:)));
+plot(r,radtodeg(theta_sol));
 xlabel('r')
 ylabel('Twist [°]')
 enhance_plot('TIMES',14,2,8,0)
@@ -248,7 +264,7 @@ end
 figure()
 hold on 
 for i =1:size(L_wing,2)
-    p(i) = plot(V_inf, P_tot(:,i))
+    p(i) = plot(V_inf, P_tot(:,i));
     cc(i) = cellstr(num2str(twist(i)));
 end
 lgd=legend(p,cc,'Location','Northwest');
