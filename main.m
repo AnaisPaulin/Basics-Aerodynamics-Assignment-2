@@ -191,10 +191,10 @@ end
 %% Q4
 
 A_front = 0.1^2;
-V_inf = [0:1:60];
+V_inf = [1:1:60];
 W = m*g;
-D = 1/2*rho*A_front*V_inf.^2*1.28;
-alpha = atan(D/W);
+D_0 = 1/2*rho*A_front*V_inf.^2*1.28;
+alpha = atan(D_0/W);
 
 v_h = sqrt(T_sol*4/(2*rho*pi*R^2)); %hovering for one rotor
 
@@ -212,17 +212,50 @@ P = 4*T*(V_inf.*sin(alpha) + V_i);
 figure()
 plot(V_inf, P)
 hold on 
-plot(V_inf, 1000*ones(1,length(V_inf)),'--')
+
 xlabel('Wind  speed [m/s]')
 ylabel('Power required [W]')
 enhance_plot('TIMES',14,2,8,0)
+plot(V_inf, 1000*ones(1,length(V_inf)),'--')
 
 %% Q5
 
+load('data.mat');
 L_rotor = T*cos(alpha);
-L_wing = 
+L_wing = L5;
 
-L_tot = L_rotor + L_wing;
-D_tot = D
+b=[0.25:0.25:1];
+AOA = [0 5 10];
+AR = [ 4 6 8 10 ];
+twist = [-4:2:4];
 
-alpha2 = atan(D_tot/L_tot);
+D_tot = D_0' + D5;
+
+alpha_tot = atan(D_tot./W);
+T_wing = L_wing./cos(alpha_tot);
+
+
+v_h = sqrt((T_sol + T_wing).*4/(2*rho*pi*R^2)); %hovering for one rotor
+
+for i =1:size(L_wing,2)
+    for j = 1:length(V_inf)
+    f= @(v_i) v_i - v_h(j,i)^2/(sqrt((cos(alpha_tot(j,i))*V_inf(j))^2 + (V_inf(j)*sin(alpha_tot(j,i)) + v_i)^2)) ;
+    V_i_tot(j,i) = fzero(f,0.1);
+    P_tot(j,i) = 4*T*(V_inf(j).*sin(alpha_tot(j,i)) + V_i_tot(j,i));
+    end
+end
+
+figure()
+hold on 
+for i =1:size(L_wing,2)
+    p(i) = plot(V_inf, P_tot(:,i))
+    cc(i) = cellstr(num2str(twist(i)));
+end
+lgd=legend(p,cc,'Location','Northwest');
+lgd.Title.String='Value of twist';
+xlabel('Wind  speed [m/s]')
+ylabel('Power required [W]')
+enhance_plot('TIMES',14,2,8,0)
+plot(V_inf, 1000*ones(1,length(V_inf)),'k--')
+
+
