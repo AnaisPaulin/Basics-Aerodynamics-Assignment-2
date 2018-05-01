@@ -34,7 +34,7 @@ for i1=1:length(N_b)
                 %C_P{i1,i2}(i3,i4) = kappa*C_T^(3/2)/sqrt(2) + sigma*C_d0/8;
                 P_ideal = T^(3/2)/sqrt(2*rho*pi*R(i3)^2); %/rotor
                 P_0 = 1/8*rho*N_b(i1)*omega(i4)^3*chord*C_d0*R(i3)^4;
-                P{i1,i2}(i3,i4) = kappa*P_ideal + P_0;
+                P{i1,i2}(i3,i4) = 4*kappa*P_ideal + 4* P_0;
                 
                 if P{i1,i2}(i3,i4) < mini_P
                     mini_P = P{i1,i2}(i3,i4);
@@ -134,7 +134,7 @@ dC_P = zeros(max_it+1,N);
 C_P = trapz(dC_T);;
 F = ones(max_it+1,N);
 
-i1 = 1; %type of twist
+i1 = 2; %type of twist
 
 theta0(1) = 4*R*(6*C_Treq/(sigma*2*pi) - 3/(4*R)*theta_tip + 3*sqrt(2)/4*sqrt(C_Treq));
 theta_tw = [0 ; (theta_tip - theta0);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
@@ -238,20 +238,20 @@ plot(V_inf, 1000*ones(1,length(V_inf)),'--')
 
 load('data.mat');
 L_rotor = T*cos(alpha);
-L_wing = L5;
+L_wing = L2;
 
 b=[0.25:0.25:1];
 AOA = [0 5 10];
-AR = [ 4 6 8 10 ];
+AR = [ 0 2 4 6 ];
 twist = [-4:2:4];
 
-D_tot = D_0' + D5;
+D_tot = D_0' + D2;
 
-alpha_tot = atan(D_tot./W);
+alpha_tot = atan(D_tot./(W));
 T_wing = L_wing./cos(alpha_tot);
 
 
-v_h = sqrt((T_sol + T_wing).*4/(2*rho*pi*R^2)); %hovering for one rotor
+v_h = sqrt((T_sol + T_wing)./(2*rho*pi*R^2)); %hovering for one rotor
 
 for i =1:size(L_wing,2)
     for j = 1:length(V_inf)
@@ -265,10 +265,10 @@ figure()
 hold on 
 for i =1:size(L_wing,2)
     p(i) = plot(V_inf, P_tot(:,i));
-    cc(i) = cellstr(num2str(twist(i)));
+    cc(i) = cellstr(num2str(AR(i)));
 end
 lgd=legend(p,cc,'Location','Northwest');
-lgd.Title.String='Value of twist';
+lgd.Title.String='Value of AR';
 xlabel('Wind  speed [m/s]')
 ylabel('Power required [W]')
 enhance_plot('TIMES',14,2,8,0)
