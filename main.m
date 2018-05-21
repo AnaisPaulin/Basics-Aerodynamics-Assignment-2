@@ -116,8 +116,6 @@ theta_ref = theta_tip + degtorad(5); %4deg??
 
 theta(3,:) = theta_tip./r; %not AOA_0 but theta_tip
 
-
-
 %Simple version for ideal case
 
 theta_simple = theta_tip./r;
@@ -131,7 +129,7 @@ dC_P = zeros(max_it+1,N);
 C_P = trapz(dC_T);;
 F = ones(max_it+1,N);
 
-i1 = 1; %type of twist
+i1 = 3; %type of twist
 
 theta0(1) = 4*R*(6*C_Treq/(sigma*2*pi) - 3/(4*R)*theta_tip + 3*sqrt(2)/4*sqrt(C_Treq));
 theta_tw = [0 ; (theta_tip - theta0);(theta_tip*(1 - 1/0.6)/0.4)]; %pente
@@ -162,6 +160,8 @@ while i2<max_it && abs(C_T(i2)-C_Treq)>10^(-3)
         phi_ideal = sqrt(C_Treq/2)./r;
         phi_ideal(1) = 10000;
         phi(1) = 10000;
+        
+        AOA = theta0(i2+1) - phi;
         
         f(i2,:) = N_b/2.*(1-r)./(r.*phi);
         F(i2+1,:) = 2/pi .* acos(exp(-f(i2)));
@@ -215,15 +215,17 @@ V_inf = [1:1:60];
 W = m*g;
 D_0 = 1/2*rho*A_front*V_inf.^2*1.28;
 alpha = atan(D_0/W);
+T_4 = T_sol*cos(alpha);
 
-v_h = sqrt(T_sol*4/(2*rho*pi*R^2)); %hovering for one rotor
+
+v_h = sqrt(T_4*4/(2*rho*pi*R^2)); %hovering for one rotor
 
 for j = 1:length(V_inf)
-f= @(v_i) v_i - v_h^2/(sqrt((cos(alpha(j))*V_inf(j))^2 + (V_inf(j)*sin(alpha(j)) + v_i)^2)) ;
-V_i(j) = fzero(f,0.001);
+    f= @(v_i) v_i - v_h^2/(sqrt((cos(alpha(j))*V_inf(j))^2 + (V_inf(j)*sin(alpha(j)) + v_i)^2)) ;
+    V_i(j) = fzero(f,0.001);
 end
 
-P = 4*T*(V_inf.*sin(alpha) + V_i);
+P = 4*T*(V_inf.*sin(alpha) + V_i); %là il faudrait aussi utiliser t-sol*cos(alpha) non ?
 
 
 
@@ -239,43 +241,43 @@ enhance_plot('TIMES',14,2,8,0)
 plot(V_inf, 1000*ones(1,length(V_inf)),'--')
 
 %% Q5
-
-load('data.mat');
-L_rotor = T*cos(alpha);
-L_wing = L2;
-
-b=[0.25:0.25:1];
-AOA = [0 5 10];
-AR = [ 0 2 4 6 ];
-twist = [-4:2:4];
-
-D_tot = D_0' + D2;
-
-alpha_tot = atan(D_tot./(W));
-T_wing = L_wing./cos(alpha_tot);
-
-
-v_h = sqrt((T_sol + T_wing)./(2*rho*pi*R^2)); %hovering for one rotor
-
-for i =1:size(L_wing,2)
-    for j = 1:length(V_inf)
-    f= @(v_i) v_i - v_h(j,i)^2/(sqrt((cos(alpha_tot(j,i))*V_inf(j))^2 + (V_inf(j)*sin(alpha_tot(j,i)) + v_i)^2)) ;
-    V_i_tot(j,i) = fzero(f,0.1);
-    P_tot(j,i) = 4*T*(V_inf(j).*sin(alpha_tot(j,i)) + V_i_tot(j,i));
-    end
-end
-
-figure()
-hold on 
-for i =1:size(L_wing,2)
-    p(i) = plot(V_inf, P_tot(:,i));
-    cc(i) = cellstr(num2str(AR(i)));
-end
-lgd=legend(p,cc,'Location','Northwest');
-lgd.Title.String='Value of AR';
-xlabel('Wind  speed [m/s]')
-ylabel('Power required [W]')
-enhance_plot('TIMES',14,2,8,0)
-plot(V_inf, 1000*ones(1,length(V_inf)),'k--')
+% 
+% load('data.mat');
+% L_rotor = T*cos(alpha);
+% L_wing = L2;
+% 
+% b=[0.25:0.25:1];
+% AOA = [0 5 10];
+% AR = [ 0 2 4 6 ];
+% twist = [-4:2:4];
+% 
+% D_tot = D_0' + D2;
+% 
+% alpha_tot = atan(D_tot./(W));
+% T_wing = L_wing./cos(alpha_tot);
+% 
+% 
+% v_h = sqrt((T_sol + T_wing)./(2*rho*pi*R^2)); %hovering for one rotor
+% 
+% for i =1:size(L_wing,2)
+%     for j = 1:length(V_inf)
+%     f= @(v_i) v_i - v_h(j,i)^2/(sqrt((cos(alpha_tot(j,i))*V_inf(j))^2 + (V_inf(j)*sin(alpha_tot(j,i)) + v_i)^2)) ;
+%     V_i_tot(j,i) = fzero(f,0.1);
+%     P_tot(j,i) = 4*T*(V_inf(j).*sin(alpha_tot(j,i)) + V_i_tot(j,i));
+%     end
+% end
+% 
+% figure()
+% hold on 
+% for i =1:size(L_wing,2)
+%     p(i) = plot(V_inf, P_tot(:,i));
+%     cc(i) = cellstr(num2str(AR(i)));
+% end
+% lgd=legend(p,cc,'Location','Northwest');
+% lgd.Title.String='Value of AR';
+% xlabel('Wind  speed [m/s]')
+% ylabel('Power required [W]')
+% enhance_plot('TIMES',14,2,8,0)
+% plot(V_inf, 1000*ones(1,length(V_inf)),'k--')
 
 
