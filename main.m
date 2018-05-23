@@ -208,6 +208,8 @@ for i =1:3
     Cd(i,:) = interp1(alpha_ref,Cd_ref,theta(i,:));
 end
 
+R_design = (4*kappa*sqrt(T_sol^3/(2*rho*pi))/(rho*pi*V_tip^3*C_d0*sigma))^1/3;
+
 %% Q4
 
 A_front = 0.1^2;
@@ -215,24 +217,22 @@ V_inf = [1:1:60];
 W = m*g;
 D_0 = 1/2*rho*A_front*V_inf.^2*1.28;
 alpha = atan(D_0/W);
-T_4 = T_sol*cos(alpha);
 
-
-v_h = sqrt(T_4*4/(2*rho*pi*R^2)); %hovering for one rotor
+v_h = sqrt(T_sol/cos(alpha)*4/(2*rho*pi*R^2)); %hovering for one rotor
 
 for j = 1:length(V_inf)
-    f= @(v_i) v_i - v_h^2/(sqrt((cos(alpha(j))*V_inf(j))^2 + (V_inf(j)*sin(alpha(j)) + v_i)^2)) ;
-    V_i(j) = fzero(f,0.001);
+f= @(v_i) v_i - v_h^2/(sqrt((cos(alpha(j))*V_inf(j))^2 + (V_inf(j)*sin(alpha(j)) + v_i)^2)) ;
+V_i(j) = fzero(f,0.001);
 end
 
-P = 4*T*(V_inf.*sin(alpha) + V_i); %là il faudrait aussi utiliser t-sol*cos(alpha) non ?
+P_4 = 4*T_sol/cos(alpha)*(V_inf.*sin(alpha) + V_i);
 
 
 
 %close all
 
 figure()
-plot(V_inf, P)
+plot(V_inf, P_4)
 hold on 
 
 xlabel('Wind  speed [m/s]')
